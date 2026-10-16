@@ -157,6 +157,14 @@ If you are using a local Redpanda instance, the consumer expects it to be reacha
 127.0.0.1:9092
 ```
 
+## Run unit tests
+
+The Kafka wrapper tests use GoogleTest and do not require a running broker:
+
+```bash
+ctest --test-dir build/release --output-on-failure
+```
+
 ---
 
 ## 6) Example build flow

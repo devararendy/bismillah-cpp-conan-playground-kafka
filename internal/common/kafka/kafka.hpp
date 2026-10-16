@@ -30,6 +30,10 @@ public:
 class KafkaTransportConsumer {
 public:
     KafkaTransportConsumer(const std::string& bootstrap_servers, const std::string& group_id) {
+        if (bootstrap_servers.empty()) {
+            throw std::runtime_error("bootstrap_servers must not be empty");
+        }
+
         std::string errstr;
 
         // 1. Create global configuration
@@ -77,6 +81,9 @@ public:
     std::unique_ptr<RdKafka::Message> receive_message(int timeout_ms = 1000) {
         // Blocks or polls for incoming buffered events from network channels
         std::unique_ptr<RdKafka::Message> msg(consumer_->consume(timeout_ms));
+        if (!msg) {
+            return nullptr;
+        }
         
         switch (msg->err()) {
             case RdKafka::ERR_NO_ERROR:

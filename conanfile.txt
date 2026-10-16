@@ -2,6 +2,7 @@
 fmt/10.2.1
 quill/12.1.0
 librdkafka/2.14.2
+gtest/1.15.0
 
 [generators]
 CMakeDeps

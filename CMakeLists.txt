@@ -17,3 +17,19 @@ add_executable(kafka_consumer cmd/domain1/consumer.cpp)
 # without breaking Android's core dynamic system dependencies.
 target_link_libraries(hello_world PRIVATE fmt::fmt quill::quill RdKafka::rdkafka++)
 target_link_libraries(kafka_consumer PRIVATE RdKafka::rdkafka++)
+
+include(CTest)
+if(BUILD_TESTING)
+	find_package(GTest CONFIG REQUIRED)
+
+	add_executable(kafka_unit_tests
+		internal/common/kafka/kafka_test.cpp
+	)
+	target_link_libraries(kafka_unit_tests PRIVATE
+		GTest::gtest_main
+		RdKafka::rdkafka++
+	)
+
+	include(GoogleTest)
+	gtest_discover_tests(kafka_unit_tests)
+endif()
