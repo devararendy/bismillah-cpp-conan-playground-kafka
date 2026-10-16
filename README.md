@@ -1,10 +1,56 @@
 # C++ Conan Playground
 
-This project is a very small C++ + Conan setup. The goal is to keep the initial setup as simple as possible, similar to a `go mod init` flow: create a Python virtual environment, install the required packages, detect or create a Conan profile, then configure and build the project.
+This project is a small C++/Conan workspace for experimenting with modern C++ build setup, structured logging, and Kafka consumption using Redpanda-compatible `librdkafka`.
+
+It contains two executable entry points:
+
+- `hello_world`: a lightweight Quill-based logging demo
+- `kafka_consumer`: a simple Kafka consumer that subscribes to a topic and prints incoming payloads
+
+The project is intentionally minimal and uses Conan + CMake instead of a large framework, making it easy to understand and extend.
 
 ---
 
-## 1) Create and activate a Python virtual environment
+## Project layout
+
+```text
+.
+├── CMakeLists.txt
+├── README.md
+├── reconfig.sh
+├── requirements.txt
+├── profiles/
+│   ├── macos-x86_64
+│   └── macos-x86_64-debug
+├── build/
+├── cmd/
+│   ├── README.md
+│   ├── helloworld/
+│   │   └── main.cpp
+│   └── domain1/
+│       └── consumer.cpp
+├── internal/
+│   └── common/
+│       └── kafka/
+│           └── kafka.hpp
+└── .vscode/
+```
+
+---
+
+## Prerequisites
+
+- Python 3
+- CMake
+- Ninja or Make
+- Conan 2
+- A running Kafka/Redpanda broker at `127.0.0.1:9092`
+
+The current consumer code expects a topic named `orders_topic` in a local broker setup.
+
+---
+
+## 1) Create and activate a Python environment
 
 From the project root:
 
@@ -14,7 +60,7 @@ source venv/bin/activate
 python -m pip install --upgrade pip
 ```
 
-If you are on Windows PowerShell:
+On Windows PowerShell:
 
 ```powershell
 py -m venv venv
@@ -22,54 +68,32 @@ py -m venv venv
 python -m pip install --upgrade pip
 ```
 
-Notes:
-- The virtual environment keeps project dependencies isolated.
-- You should activate it whenever you work on the project.
-
 ---
 
-## 2) Install the required Python packages
-
-Install the dependencies from the project requirements file:
+## 2) Install project dependencies
 
 ```bash
 python -m pip install -r requirements.txt
 ```
 
-This project currently installs Conan and utilities needed for profile detection and dependency generation.
+This installs the Python-side tooling used to manage the Conan profile and dependency setup.
 
 ---
 
-## 3) Initialize Conan
+## 3) Detect or configure Conan profiles
 
-After installing the Python packages, initialize Conan in the repository:
+A default profile can be detected automatically:
 
 ```bash
 conan profile detect --force
 ```
 
-This creates a default profile for your machine at:
+The repo also ships with project profiles under the `profiles/` directory, including:
 
-```bash
-~/.conan2/profiles/default
-```
+- `profiles/macos-x86_64`
+- `profiles/macos-x86_64-debug`
 
-You can also inspect profiles:
-
-```bash
-conan profile list
-conan profile show
-```
-
----
-
-## 4) Create a custom Conan profile for this project
-
-This project already includes an example profile in:
-
-- [profiles/macos-x86_64](profiles/macos-x86_64)
-
-Example:
+Example profile content:
 
 ```ini
 [settings]
@@ -82,128 +106,62 @@ compiler.cppstd=20
 compiler.libcxx=libc++
 ```
 
-### Create a new profile for your machine
-
-For macOS Intel:
-
-```bash
-mkdir -p profiles
-cat > profiles/macos-x86_64 <<'EOF'
-[settings]
-os=Macos
-arch=x86_64
-build_type=Release
-compiler=apple-clang
-compiler.version=15
-compiler.cppstd=20
-compiler.libcxx=libc++
-EOF
-```
-
-For macOS Apple Silicon:
-
-```bash
-cat > profiles/macos-arm64 <<'EOF'
-[settings]
-os=Macos
-arch=armv8
-build_type=Release
-compiler=apple-clang
-compiler.version=15
-compiler.cppstd=20
-compiler.libcxx=libc++
-EOF
-```
-
-For Linux x86_64:
-
-```bash
-cat > profiles/linux-x86_64 <<'EOF'
-[settings]
-os=Linux
-arch=x86_64
-build_type=Release
-compiler=gcc
-compiler.version=13
-compiler.cppstd=20
-compiler.libcxx=libstdc++11
-EOF
-```
-
 ---
 
-## 5) Android / Termux setup
+## 4) Build the project
 
-If you are running this project from Android via Termux, the setup is similar, but you need Android-specific tooling and a profile for the target device.
-
-### Install basic dependencies in Termux
-
-```bash
-pkg update
-pkg install git clang cmake ninja python make
-```
-
-Then create the virtual environment:
-
-```bash
-python3 -m venv venv
-source venv/bin/activate
-python -m pip install --upgrade pip
-python -m pip install -r requirements.txt
-```
-
-### Create an Android profile
-
-Example profile for Android ARM64:
-
-```bash
-mkdir -p profiles
-cat > profiles/android-termux-arm64 <<'EOF'
-[settings]
-os=Android
-os.api_level=24
-arch=armv8
-build_type=Release
-compiler=clang
-compiler.version=16
-compiler.libcxx=c++_shared
-EOF
-```
-
-If the toolchain is different on your system, the most important part is matching the target platform and compiler details for the device you are building for.
-
----
-
-## 6) Build the project
-
-This project includes a helper script to regenerate the Conan build environment:
+This workspace includes a helper script that regenerates the Conan environment and rebuilds the CMake project:
 
 ```bash
 bash reconfig.sh
 ```
 
-It uses the default Release profile at:
+This script uses the default profile at `profiles/macos-x86_64` and writes outputs under `build/release`.
+
+To build a debug configuration:
 
 ```bash
-profiles/macos-x86_64
+bash reconfig.sh ./profiles/macos-x86_64-debug
 ```
 
-### Switch between Release and Debug
+This writes to `build/debug`.
 
-The script always writes under the project `build/` directory, with a `release` or `debug` subfolder.
+You can also force the output folder explicitly:
 
 ```bash
-./reconfig.sh                           # build/release
-./reconfig.sh ./profiles/macos-x86_64-debug   # build/debug
-./reconfig.sh ./profiles/macos-x86_64 debug    # force build/debug
+bash reconfig.sh ./profiles/macos-x86_64 debug
 ```
 
-The script automatically chooses:
+---
 
-- `Release` for profiles without `debug` in the name
-- `Debug` for profiles with `debug` in the name
+## 5) Run the executables
 
-If you want to use a different profile manually, you can call Conan directly:
+After the build succeeds, run the generated binaries from the project root:
+
+```bash
+./build/release/hello_world
+./build/release/kafka_consumer
+```
+
+### hello_world
+
+This sample uses Quill and writes structured JSON log output to stdout.
+
+### kafka_consumer
+
+This sample subscribes to the `orders_topic` topic and logs received messages from the configured Kafka/Redpanda broker.
+
+If you are using a local Redpanda instance, the consumer expects it to be reachable at:
+
+```text
+127.0.0.1:9092
+```
+
+---
+
+## 6) Example build flow
+
+If you want to do the steps manually instead of using the helper script:
 
 ```bash
 conan install . \
@@ -221,105 +179,33 @@ cmake --build build/release
 
 ---
 
-## 7) Setup VS Code for C++ debugging
+## 7) Notes on the sample apps
 
-Install these VS Code extensions:
+The code is intentionally compact and follows a simple structure:
 
-- `ms-vscode.cpptools`
-- `ms-vscode.cmake-tools`
-- `vadimcn.vscode-lldb`
+- `cmd/helloworld/main.cpp` demonstrates structured logging
+- `cmd/domain1/consumer.cpp` demonstrates Kafka consumption
+- `internal/common/kafka/kafka.hpp` contains the reusable consumer wrapper
 
-Then:
-
-1. Open the project in VS Code.
-2. Run **CMake: Select Configure Preset** and choose `conan-release`.
-3. Run **CMake: Configure**.
-4. Open the Run and Debug tab.
-5. Choose one of the launch configs:
-   - `Debug hello_world (Release)`
-   - `Debug hello_world (Debug)`
-
-The debug launch configuration is already defined in [.vscode/launch.json](.vscode/launch.json).
-
-### Debug in VS Code
-
-For a debug build:
-
-```bash
-./reconfig.sh ./profiles/macos-x86_64-debug
-```
-
-This produces the binary at:
-
-```bash
-build/debug/hello_world
-```
-
-Then select **Debug hello_world (Debug)** in VS Code and press `F5`.
-
-For a release build:
-
-```bash
-./reconfig.sh
-```
-
-This produces the binary at:
-
-```bash
-build/release/hello_world
-```
-
-Then select **Debug hello_world (Release)** and press `F5`.
+This project is a good base for adding more command-line services or additional Kafka producers/consumers.
 
 ---
 
-## 8) Simple “init” flow
+## Troubleshooting
 
-If you want the shortest possible setup, use this sequence:
+- If Conan cannot find dependencies, make sure the profile matches your host operating system and compiler.
+- If the Kafka consumer fails to connect, verify the broker is running and the port is correct.
+- If the build fails, rerun the project generator script to refresh the Conan toolchain and CMake configuration.
 
 ```bash
-python3 -m venv venv
-source venv/bin/activate
-python -m pip install --upgrade pip
-python -m pip install -r requirements.txt
-conan profile detect --force
-mkdir -p profiles
-cat > profiles/macos-x86_64 <<'EOF'
-[settings]
-os=Macos
-arch=x86_64
-build_type=Release
-compiler=apple-clang
-compiler.version=15
-compiler.cppstd=20
-compiler.libcxx=libc++
-EOF
 bash reconfig.sh
 ```
 
-That is the project bootstrap in one simple flow.
-
 ---
 
-## 9) Useful commands
+## Related files
 
-```bash
-source venv/bin/activate
-conan profile list
-conan profile show
-conan install . --profile:host=profiles/macos-x86_64 --profile:build=profiles/macos-x86_64 --output-folder=build/release --build=missing
-cmake --build build/release
-./build/release/hello_world
-./reconfig.sh ./profiles/macos-x86_64-debug
-```
-
----
-
-## 10) Troubleshooting
-
-- If Conan says your profile is missing, run `conan profile detect --force`.
-- If you change architecture or OS, create a new profile instead of reusing the old one.
-- If you are building on mobile or Android, make sure the profile matches the target architecture and ABI.
-- If you are using Termux, install the required native tools first (`clang`, `cmake`, `make`, `ninja`).
-
-This should keep the setup easy and predictable for future builds.
+- [`CMakeLists.txt`](CMakeLists.txt)
+- [`reconfig.sh`](reconfig.sh)
+- [`cmd/README.md`](cmd/README.md)
+- [`profiles/macos-x86_64`](profiles/macos-x86_64)
