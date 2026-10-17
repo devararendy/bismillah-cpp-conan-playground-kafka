@@ -24,16 +24,20 @@ include(CTest)
 if(BUILD_TESTING)
 	find_package(GTest CONFIG REQUIRED)
 
-	add_executable(kafka_unit_tests
-		internal/common/kafka/kafka_test.cpp
-	)
-	target_link_libraries(kafka_unit_tests PRIVATE
+	file(GLOB_RECURSE UNIT_TEST_SOURCES CONFIGURE_DEPENDS "${PROJECT_SOURCE_DIR}/*_test.cpp")
+	list(FILTER UNIT_TEST_SOURCES EXCLUDE REGEX "/build/")
+	if(NOT UNIT_TEST_SOURCES)
+		message(FATAL_ERROR "No *_test.cpp files were found for unit test discovery")
+	endif()
+
+	add_executable(unit_tests ${UNIT_TEST_SOURCES})
+	target_link_libraries(unit_tests PRIVATE
 		GTest::gtest_main
 		RdKafka::rdkafka++
 	)
 
 	include(GoogleTest)
-	gtest_discover_tests(kafka_unit_tests)
+	gtest_discover_tests(unit_tests)
 
 	if(ENABLE_COVERAGE)
 		if(NOT CMAKE_CXX_COMPILER_ID MATCHES "Clang")
@@ -64,11 +68,21 @@ if(BUILD_TESTING)
 			endif()
 		endif()
 
-		target_compile_options(kafka_unit_tests PRIVATE
+		target_compile_options(unit_tests PRIVATE
 			-fprofile-instr-generate
 			-fcoverage-mapping
 		)
-		target_link_options(kafka_unit_tests PRIVATE -fprofile-instr-generate)
+		target_link_options(unit_tests PRIVATE -fprofile-instr-generate)
+
+		file(GLOB_RECURSE ALL_CPP_SOURCES CONFIGURE_DEPENDS "${PROJECT_SOURCE_DIR}/**/*.cpp")
+		file(GLOB_RECURSE ALL_HEADER_SOURCES CONFIGURE_DEPENDS "${PROJECT_SOURCE_DIR}/**/*.[hH]pp")
+		set(COVERAGE_SOURCE_FILES ${ALL_CPP_SOURCES} ${ALL_HEADER_SOURCES})
+		list(FILTER COVERAGE_SOURCE_FILES EXCLUDE REGEX "_test\\.(cpp|hpp)$")
+		list(FILTER COVERAGE_SOURCE_FILES EXCLUDE REGEX "/build/")
+		list(REMOVE_DUPLICATES COVERAGE_SOURCE_FILES)
+		if(NOT COVERAGE_SOURCE_FILES)
+			message(FATAL_ERROR "No production C++ or header files were found for coverage reporting")
+		endif()
 
 		set(COVERAGE_DATA_DIR "${CMAKE_BINARY_DIR}/coverage-data")
 		set(COVERAGE_HTML_DIR "${CMAKE_BINARY_DIR}/coverage-html")
@@ -82,12 +96,12 @@ if(BUILD_TESTING)
 			COMMAND "${CMAKE_COMMAND}"
 				"-DLLVM_PROFDATA=${LLVM_PROFDATA_EXECUTABLE}"
 				"-DLLVM_COV=${LLVM_COV_EXECUTABLE}"
-				"-DTEST_EXECUTABLE=$<TARGET_FILE:kafka_unit_tests>"
+				"-DTEST_EXECUTABLE=$<TARGET_FILE:unit_tests>"
 				"-DPROFILE_DIR=${COVERAGE_DATA_DIR}"
-				"-DSOURCE_FILE=${PROJECT_SOURCE_DIR}/internal/common/kafka/kafka.hpp"
+				"-DSOURCE_FILES=${COVERAGE_SOURCE_FILES}"
 				"-DHTML_DIR=${COVERAGE_HTML_DIR}"
 				-P "${PROJECT_SOURCE_DIR}/cmake/GenerateCoverage.cmake"
-			DEPENDS kafka_unit_tests
+			DEPENDS unit_tests
 			USES_TERMINAL
 			VERBATIM
 		)

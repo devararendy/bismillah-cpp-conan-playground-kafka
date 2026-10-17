@@ -12,9 +12,17 @@ if(NOT MERGE_RESULT EQUAL 0)
 	message(FATAL_ERROR "llvm-profdata failed to merge the unit-test profiles")
 endif()
 
-message(STATUS "Coverage report for kafka.hpp:")
+if(NOT DEFINED SOURCE_FILES OR "${SOURCE_FILES}" STREQUAL "")
+	message(FATAL_ERROR "No *_test.cpp source files were provided to coverage generation")
+endif()
+
+message(STATUS "Coverage report for:")
+foreach(SOURCE_FILE IN LISTS SOURCE_FILES)
+	message(STATUS "  ${SOURCE_FILE}")
+endforeach()
+
 execute_process(
-	COMMAND "${LLVM_COV}" report "${TEST_EXECUTABLE}" "-instr-profile=${PROFILE_DATA}" "${SOURCE_FILE}"
+	COMMAND "${LLVM_COV}" report "${TEST_EXECUTABLE}" "-instr-profile=${PROFILE_DATA}" ${SOURCE_FILES}
 	RESULT_VARIABLE REPORT_RESULT
 )
 if(NOT REPORT_RESULT EQUAL 0)
@@ -22,7 +30,7 @@ if(NOT REPORT_RESULT EQUAL 0)
 endif()
 
 execute_process(
-	COMMAND "${LLVM_COV}" show "${TEST_EXECUTABLE}" "-instr-profile=${PROFILE_DATA}" "${SOURCE_FILE}"
+	COMMAND "${LLVM_COV}" show "${TEST_EXECUTABLE}" "-instr-profile=${PROFILE_DATA}" ${SOURCE_FILES}
 		-format=html "-output-dir=${HTML_DIR}"
 	RESULT_VARIABLE HTML_RESULT
 )
