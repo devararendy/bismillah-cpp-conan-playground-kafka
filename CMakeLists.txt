@@ -13,12 +13,13 @@ find_package(RdKafka CONFIG REQUIRED)
 
 add_executable(hello_world cmd/helloworld/main.cpp)
 add_executable(kafka_consumer cmd/domain1/consumer.cpp)
-
+add_executable(multithread cmd/multithread/multithread.cpp)
 #  FORCE TARGET STATIC LINKING
 # This tells the compiler to bundle your source code and fmt together 
 # without breaking Android's core dynamic system dependencies.
 target_link_libraries(hello_world PRIVATE fmt::fmt quill::quill RdKafka::rdkafka++)
 target_link_libraries(kafka_consumer PRIVATE RdKafka::rdkafka++)
+target_link_libraries(multithread PRIVATE fmt::fmt quill::quill RdKafka::rdkafka++)
 
 include(CTest)
 if(BUILD_TESTING)
