@@ -165,6 +165,16 @@ The Kafka wrapper tests use GoogleTest and do not require a running broker:
 ctest --test-dir build/release --output-on-failure
 ```
 
+### Generate Kafka unit-test coverage
+
+On macOS with Apple Clang, use the coverage mode of the helper script. It configures an isolated Debug build, builds the tests, runs them, prints a line-coverage summary for `kafka.hpp`, and creates an HTML report:
+
+```bash
+bash reconfig.sh coverage
+```
+
+Open `build/coverage/coverage-html/index.html` to inspect the annotated report. LLVM coverage tools (`llvm-profdata` and `llvm-cov`) are provided by Xcode Command Line Tools.
+
 ---
 
 ## 6) Example build flow
