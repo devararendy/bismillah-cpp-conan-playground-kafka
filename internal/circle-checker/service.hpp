@@ -2,23 +2,24 @@
 
 #include <string>
 #include <vector>
-
-class CircleCheckerInterface {
-
-public:
-    virtual ~CircleCheckerInterface() = default;
-    virtual std::vector<std::string> CircleCategories(const std::vector<std::string>& circleXYRadius) = 0;
-};
-
+#include "model.hpp"
 class CircleCheckerService {
 private:
-    CircleCheckerInterface& circleCheckerImpl;
+    std::shared_ptr<CircleCheckerInterface> circleCheckerImpl;
 
 public:
-    explicit CircleCheckerService(CircleCheckerInterface& circleCheckerImpl)
+    explicit CircleCheckerService(std::shared_ptr<CircleCheckerInterface> circleCheckerImpl)
         : circleCheckerImpl(circleCheckerImpl) {}
 
     std::vector<std::string> CircleCategories(const std::vector<std::string>& circleXYRadius) {
-        return circleCheckerImpl.CircleCategories(circleXYRadius);
+        const auto categories = circleCheckerImpl->CircleCategories(circleXYRadius);
+        std::vector<std::string> categoryNames;
+        categoryNames.reserve(categories.size());
+
+        for (const auto category : categories) {
+            categoryNames.emplace_back(to_string(category));
+        }
+
+        return categoryNames;
     }
 };
