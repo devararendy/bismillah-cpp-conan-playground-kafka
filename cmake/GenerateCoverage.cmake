@@ -1,4 +1,4 @@
-file(GLOB PROFILE_FILES "${PROFILE_DIR}/kafka-*.profraw")
+file(GLOB PROFILE_FILES "${PROFILE_DIR}/unit_tests-*.profraw")
 if(NOT PROFILE_FILES)
 	message(FATAL_ERROR "No LLVM profile data was produced by the unit tests")
 endif()
