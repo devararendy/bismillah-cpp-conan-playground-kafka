@@ -20,11 +20,10 @@ public:
     
             std::stringstream ss(circlePair);
             double x1, y1, r1, x2, y2, r2;
-            ss >> x1 >> y1 >> r1 >> x2 >> y2 >> r2;
-            // if (!(ss >> x1 >> y1 >> r1 >> x2 >> y2 >> r2)) {
-            //     std::cerr << "Error: Invalid input format for circle pair: " << circlePair << std::endl;
-            //     continue;  // Skip this pair and continue with the next
-            // }
+            if (!(ss >> x1 >> y1 >> r1 >> x2 >> y2 >> r2)) {
+                std::cerr << "Error: Invalid input format for circle pair: " << circlePair << std::endl;
+                continue;  // Skip this pair and continue with the next
+            }
 
             std::cout << "Circle 1: (" << x1 << ", " << y1 << "), Radius: " << r1 << std::endl;
             std::cout << "Circle 2: (" << x2 << ", " << y2 << "), Radius: " << r2 << std::endl;
