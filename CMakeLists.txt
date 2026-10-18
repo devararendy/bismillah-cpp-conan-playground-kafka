@@ -35,6 +35,7 @@ if(BUILD_TESTING)
 
 	add_executable(unit_tests ${UNIT_TEST_SOURCES})
 	target_link_libraries(unit_tests PRIVATE
+		GTest::gmock_main
 		GTest::gtest_main
 		RdKafka::rdkafka++
 	)

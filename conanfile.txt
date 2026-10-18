@@ -10,4 +10,5 @@ CMakeToolchain
 
 [options]
 *:shared=False
+gtest/*:build_gmock=True
 
