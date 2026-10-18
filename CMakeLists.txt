@@ -94,7 +94,7 @@ if(BUILD_TESTING)
 			COMMAND "${CMAKE_COMMAND}" -E rm -rf "${COVERAGE_DATA_DIR}" "${COVERAGE_HTML_DIR}"
 			COMMAND "${CMAKE_COMMAND}" -E make_directory "${COVERAGE_DATA_DIR}"
 			COMMAND "${CMAKE_COMMAND}" -E env
-				"LLVM_PROFILE_FILE=${COVERAGE_DATA_DIR}/kafka-%p.profraw"
+				"LLVM_PROFILE_FILE=${COVERAGE_DATA_DIR}/unit_tests-%p.profraw"
 				"${CMAKE_COMMAND}" -E chdir "${CMAKE_BINARY_DIR}"
 				"${CMAKE_CTEST_COMMAND}" --output-on-failure
 			COMMAND "${CMAKE_COMMAND}"

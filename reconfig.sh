@@ -64,7 +64,7 @@ cmake -S "${BASE_DIR}" -B "${OUTPUT_DIR}" \
 
 # 4. Compile the binary executable.
 if [[ "${MODE_ARG}" == "coverage" ]]; then
-  cmake --build "${OUTPUT_DIR}" --target kafka_unit_tests
+  cmake --build "${OUTPUT_DIR}" --target unit_tests
   cmake --build "${OUTPUT_DIR}" --target coverage
 else
   cmake --build "${OUTPUT_DIR}"
