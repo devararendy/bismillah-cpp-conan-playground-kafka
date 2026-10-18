@@ -1,8 +1,6 @@
 #pragma once
 
-#include <memory>
 #include <string>
-#include <utility>
 #include <vector>
 
 class CircleCheckerInterface {
@@ -14,14 +12,13 @@ public:
 
 class CircleCheckerService {
 private:
-    std::shared_ptr<CircleCheckerInterface> circleCheckerImpl;
+    CircleCheckerInterface& circleCheckerImpl;
 
 public:
-    CircleCheckerService(
-        std::shared_ptr<CircleCheckerInterface> circleCheckerImpl
-    ) : circleCheckerImpl(circleCheckerImpl) {}
+    explicit CircleCheckerService(CircleCheckerInterface& circleCheckerImpl)
+        : circleCheckerImpl(circleCheckerImpl) {}
 
     std::vector<std::string> CircleCategories(const std::vector<std::string>& circleXYRadius) {
-        return circleCheckerImpl->CircleCategories(circleXYRadius);
+        return circleCheckerImpl.CircleCategories(circleXYRadius);
     }
 };

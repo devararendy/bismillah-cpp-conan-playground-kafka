@@ -1,8 +1,12 @@
-#include "service.hpp"
-#include "checker.hpp"
+#include "../../internal/circle-checker/service.hpp"
+#include "../../internal/circle-checker/checker.hpp"
+
+#include <iostream>
+#include <string>
+#include <vector>
 
 int main() {
-    std::shared_ptr<CircleCheckerInterface> checkerImpl = std::make_shared<CircleCheckerRepo>();
+    CircleCheckerRepo checkerImpl;
     CircleCheckerService service(checkerImpl);
 
     std::vector<std::string> circleXYRadius = {"0,0,5", "1,1,3", "2,2,4"};
