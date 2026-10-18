@@ -35,14 +35,17 @@ public:
             std::cout << "Distance between centers: " << dist << std::endl;
 
             if (dist == (r1 + r2)) {
-                std::cout << "Circles are touching." << std::endl;
-                resultCategories.push_back(CircleCategory::Touching);
+                std::cout << "Circles are touching externally." << std::endl;
+                resultCategories.push_back(CircleCategory::TouchingExternal);
             } else if (dist > (r1 + r2)) {
                 std::cout << "Circles are disjoint outside." << std::endl;
                 resultCategories.push_back(CircleCategory::DisjointOutside);
             } else if (dist == 0 && r1 == r2) {
                 std::cout << "Circles are concentric." << std::endl;
                 resultCategories.push_back(CircleCategory::Concentric);
+            } else if (dist == abs(r1 - r2)) {
+                std::cout << "Circles are touching internally." << std::endl;
+                resultCategories.push_back(CircleCategory::TouchingInternal);
             } else if (dist < (r1 + r2) && dist > abs(r1 - r2)) {
                 std::cout << "Circles are intersecting." << std::endl;
                 resultCategories.push_back(CircleCategory::Intersecting);

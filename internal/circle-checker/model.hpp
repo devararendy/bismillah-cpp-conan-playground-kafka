@@ -4,9 +4,10 @@
 #include <vector>
 #include <string_view>
 
-enum class CircleCategory {
+enum class CircleCategory : uint8_t {
     Undefined,
-    Touching,
+    TouchingExternal,
+    TouchingInternal,
     DisjointOutside,
     Concentric,
     Intersecting,
@@ -15,7 +16,8 @@ enum class CircleCategory {
 
 constexpr std::string_view to_string(CircleCategory category) {
     switch (category) {
-        case CircleCategory::Touching: return "Touching";
+        case CircleCategory::TouchingExternal: return "TouchingExternal";
+        case CircleCategory::TouchingInternal: return "TouchingInternal";
         case CircleCategory::DisjointOutside: return "DisjointOutside";
         case CircleCategory::Concentric: return "Concentric";
         case CircleCategory::Intersecting: return "Intersecting";
