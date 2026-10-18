@@ -14,13 +14,13 @@ TEST(CircleCheckerRepoTest, CircleCategoriesReturnsCorrectCategories) {
         "0 0 2 0 0 1", // DisjointInside
     };
 
-    std::vector<CircleCategory> expected = {
-        CircleCategory::DisjointOutside,
-        CircleCategory::TouchingExternal,
-        CircleCategory::Concentric,
-        CircleCategory::Intersecting,
-        CircleCategory::TouchingInternal,
-        CircleCategory::DisjointInside,
+    std::vector<circle_category::CircleCategory> expected = {
+        circle_category::CircleCategory::DisjointOutside,
+        circle_category::CircleCategory::TouchingExternal,
+        circle_category::CircleCategory::Concentric,
+        circle_category::CircleCategory::Intersecting,
+        circle_category::CircleCategory::TouchingInternal,
+        circle_category::CircleCategory::DisjointInside,
     };
 
     auto result = checker.CircleCategories(input);
@@ -37,9 +37,9 @@ TEST(CircleCheckerRepoTest, IgnoresInvalidInputPairs) {
         "0 0 1 0 0 1", // valid, Concentric
     };
 
-    std::vector<CircleCategory> expected = {
-        CircleCategory::DisjointOutside,
-        CircleCategory::Concentric,
+    std::vector<circle_category::CircleCategory> expected = {
+        circle_category::CircleCategory::DisjointOutside,
+        circle_category::CircleCategory::Concentric,
     };
 
     auto result = checker.CircleCategories(input);

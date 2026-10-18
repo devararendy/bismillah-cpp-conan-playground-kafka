@@ -17,7 +17,7 @@ public:
         categoryNames.reserve(categories.size());
 
         for (const auto category : categories) {
-            categoryNames.emplace_back(to_string(category));
+            categoryNames.emplace_back(circle_category::to_string(category));
         }
 
         return categoryNames;

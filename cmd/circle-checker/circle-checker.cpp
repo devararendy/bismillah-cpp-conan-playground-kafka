@@ -14,8 +14,7 @@ int main() {
         "0 1 4 1 2 4",
     };
     std::vector<std::string> categories = service.CircleCategories(circleXYRadius);
-
-    // Output the categories (currently empty since CircleCategories returns an empty vector)
+    
     for (const auto& category : categories) {
         std::cout << category << std::endl;
     }

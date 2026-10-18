@@ -12,8 +12,8 @@ class CircleCheckerRepo : public CircleCheckerInterface {
 
 public:
     ~CircleCheckerRepo() override = default;
-    std::vector<CircleCategory> CircleCategories(const std::vector<std::string>& pairCirclesXYRadius) override {
-        std::vector<CircleCategory> resultCategories;
+    std::vector<circle_category::CircleCategory> CircleCategories(const std::vector<std::string>& pairCirclesXYRadius) override {
+        std::vector<circle_category::CircleCategory> resultCategories;
 
         for (const auto& circlePair : pairCirclesXYRadius) {
             std::cout << "CircleCheckerRepo::CircleCategories called with input: " << circlePair << std::endl;
@@ -35,25 +35,25 @@ public:
 
             if (dist == (r1 + r2)) {
                 std::cout << "Circles are touching externally." << std::endl;
-                resultCategories.push_back(CircleCategory::TouchingExternal);
+                resultCategories.push_back(circle_category::CircleCategory::TouchingExternal);
             } else if (dist > (r1 + r2)) {
                 std::cout << "Circles are disjoint outside." << std::endl;
-                resultCategories.push_back(CircleCategory::DisjointOutside);
+                resultCategories.push_back(circle_category::CircleCategory::DisjointOutside);
             } else if (dist == 0 && r1 == r2) {
                 std::cout << "Circles are concentric." << std::endl;
-                resultCategories.push_back(CircleCategory::Concentric);
+                resultCategories.push_back(circle_category::CircleCategory::Concentric);
             } else if (dist == abs(r1 - r2)) {
                 std::cout << "Circles are touching internally." << std::endl;
-                resultCategories.push_back(CircleCategory::TouchingInternal);
+                resultCategories.push_back(circle_category::CircleCategory::TouchingInternal);
             } else if (dist < (r1 + r2) && dist > abs(r1 - r2)) {
                 std::cout << "Circles are intersecting." << std::endl;
-                resultCategories.push_back(CircleCategory::Intersecting);
+                resultCategories.push_back(circle_category::CircleCategory::Intersecting);
             } else if (dist < abs(r1 - r2)) {
                 std::cout << "One circle is inside the other." << std::endl;
-                resultCategories.push_back(CircleCategory::DisjointInside);
+                resultCategories.push_back(circle_category::CircleCategory::DisjointInside);
             } else {
                 std::cout << "Undefined relationship." << std::endl;
-                resultCategories.push_back(CircleCategory::Undefined);
+                resultCategories.push_back(circle_category::CircleCategory::Undefined);
             }
         }
         std::cout << std::endl;
