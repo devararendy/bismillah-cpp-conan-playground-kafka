@@ -1,0 +1,10 @@
+{
+    "name": "rendy",
+    "value": 100,
+    "enabled": true,
+    "example_config": {
+        "example_name": "devara",
+        "example_value": 200,
+        "example_enabled": false
+    }
+}
