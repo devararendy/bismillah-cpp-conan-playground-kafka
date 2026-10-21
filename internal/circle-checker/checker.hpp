@@ -34,21 +34,39 @@ public:
             std::cout << "Distance between centers: " << dist << std::endl;
 
             if (dist == (r1 + r2)) {
+                // 0,1,2,3,4
+                //         1,0,1
+
                 std::cout << "Circles are touching externally." << std::endl;
                 resultCategories.push_back(circle_category::CircleCategory::TouchingExternal);
             } else if (dist > (r1 + r2)) {
+                // 0,1,2,3,4,..
+                //           1,0,1
+
                 std::cout << "Circles are disjoint outside." << std::endl;
                 resultCategories.push_back(circle_category::CircleCategory::DisjointOutside);
             } else if (dist == 0 && r1 == r2) {
+                // 0,1,2,3,4
+                // 0,1,2,3,4
+                
                 std::cout << "Circles are concentric." << std::endl;
                 resultCategories.push_back(circle_category::CircleCategory::Concentric);
             } else if (dist == abs(r1 - r2)) {
+                // 0,1,2,3,4
+                //     1,0,1
                 std::cout << "Circles are touching internally." << std::endl;
                 resultCategories.push_back(circle_category::CircleCategory::TouchingInternal);
             } else if (dist < (r1 + r2) && dist > abs(r1 - r2)) {
+                // 0,1,2,3,4
+                //       1,0,1
                 std::cout << "Circles are intersecting." << std::endl;
                 resultCategories.push_back(circle_category::CircleCategory::Intersecting);
             } else if (dist < abs(r1 - r2)) {
+                // 0,1,2,3,4
+                //   1,0,1
+
+                //   0,1,2,3,4
+                // 1,0,1
                 std::cout << "One circle is inside the other." << std::endl;
                 resultCategories.push_back(circle_category::CircleCategory::DisjointInside);
             } else {
