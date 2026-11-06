@@ -149,7 +149,7 @@ void calcUsingNative(const OrderPerAccounts& orders_per_account) {
 
     Channel<OrderDetails> jobs;
     Channel<Result> results;
-    std::vector<std::thread> workers;
+    std::vector<std::jthread> workers;
     workers.reserve(worker_count);
 
     std::atomic<bool> cancelled = false;
@@ -171,7 +171,7 @@ void calcUsingNative(const OrderPerAccounts& orders_per_account) {
         });
     }
 
-    std::thread producer([&orders_per_account, &jobs] {
+    std::jthread producer([&orders_per_account, &jobs] {
         for (const auto& [account, orders] : orders_per_account) {
             static_cast<void>(account);
             jobs.send(orders);
@@ -179,12 +179,6 @@ void calcUsingNative(const OrderPerAccounts& orders_per_account) {
         jobs.close();
     });
 
-    producer.join();
-    for (auto& worker : workers) {
-        if (worker.joinable()) {
-            worker.join();
-        }
-    }
     results.close();
 
     int required_broker_limit = 0;
