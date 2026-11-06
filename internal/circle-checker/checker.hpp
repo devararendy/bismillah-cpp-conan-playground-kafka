@@ -2,6 +2,7 @@
 
 #include "model.hpp"
 
+#include <cmath>
 #include <iostream>
 #include <string>
 #include <sstream>
@@ -30,7 +31,7 @@ public:
 
             // Distance between centers
             double sq = ((x2 - x1) * (x2 - x1)) + ((y2 - y1) * (y2 - y1));
-            double dist = sqrt(sq);
+            double dist = std::sqrt(sq);
             std::cout << "Distance between centers: " << dist << std::endl;
 
             if (dist == (r1 + r2)) {
@@ -51,17 +52,17 @@ public:
                 
                 std::cout << "Circles are concentric." << std::endl;
                 resultCategories.push_back(circle_category::CircleCategory::Concentric);
-            } else if (dist == abs(r1 - r2)) {
+            } else if (dist == std::abs(r1 - r2)) {
                 // 0,1,2,3,4
                 //     1,0,1
                 std::cout << "Circles are touching internally." << std::endl;
                 resultCategories.push_back(circle_category::CircleCategory::TouchingInternal);
-            } else if (dist < (r1 + r2) && dist > abs(r1 - r2)) {
+            } else if (dist < (r1 + r2) && dist > std::abs(r1 - r2)) {
                 // 0,1,2,3,4
                 //       1,0,1
                 std::cout << "Circles are intersecting." << std::endl;
                 resultCategories.push_back(circle_category::CircleCategory::Intersecting);
-            } else if (dist < abs(r1 - r2)) {
+            } else if (dist < std::abs(r1 - r2)) {
                 // 0,1,2,3,4
                 //   1,0,1
 

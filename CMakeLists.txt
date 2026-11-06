@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.15)
 project(ConanHelloWorld CXX)
 
-set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
@@ -16,6 +16,8 @@ add_executable(kafka_consumer cmd/domain1/consumer.cpp)
 add_executable(multithread cmd/multithread/multithread.cpp)
 add_executable(circle_checker cmd/circle-checker/circle-checker.cpp)
 add_executable(sample_load_config cmd/sample-load-config/sample-load-config.cpp)
+add_executable(concurrent cmd/concurrent/concurrent.cpp)
+
 #  FORCE TARGET STATIC LINKING
 # This tells the compiler to bundle your source code and fmt together 
 # without breaking Android's core dynamic system dependencies.
@@ -24,6 +26,7 @@ target_link_libraries(kafka_consumer PRIVATE RdKafka::rdkafka++)
 target_link_libraries(multithread PRIVATE fmt::fmt quill::quill RdKafka::rdkafka++)
 target_link_libraries(circle_checker PRIVATE fmt::fmt quill::quill RdKafka::rdkafka++)
 target_link_libraries(sample_load_config PRIVATE fmt::fmt quill::quill RdKafka::rdkafka++)
+target_link_libraries(concurrent PRIVATE fmt::fmt quill::quill RdKafka::rdkafka++)
 
 include(CTest)
 if(BUILD_TESTING)

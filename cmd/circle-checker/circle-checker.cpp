@@ -2,6 +2,7 @@
 #include "../../internal/circle-checker/checker.hpp"
 
 #include <iostream>
+#include <memory>
 #include <string>
 #include <vector>
 
