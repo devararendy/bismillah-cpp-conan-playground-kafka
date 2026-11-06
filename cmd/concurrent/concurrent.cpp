@@ -3,9 +3,11 @@
 #include <atomic>
 #include <chrono>
 #include <condition_variable>
+#include <coroutine>
 #include <functional>
 #include <future>
 #include <iostream>
+#include <memory>
 #include <mutex>
 #include <optional>
 #include <queue>
@@ -14,6 +16,7 @@
 #include <thread>
 #include <type_traits>
 #include <unordered_map>
+#include <utility>
 #include <vector>
 
 namespace concurrent_example {
@@ -52,6 +55,135 @@ struct Result {
     int worker_id;
     int lot_balance;
     std::optional<std::string> error;
+};
+
+template <typename TResult>
+class AsyncAwaitable {
+public:
+    template <typename Function>
+    explicit AsyncAwaitable(Function&& function)
+        : state_(std::make_shared<State>(
+              std::async(std::launch::async, std::forward<Function>(function)))) {}
+
+    [[nodiscard]] bool await_ready() const noexcept {
+        return state_->future.wait_for(std::chrono::seconds(0)) ==
+               std::future_status::ready;
+    }
+
+    bool await_suspend(std::coroutine_handle<> handle) const {
+        std::thread([state = state_, handle] {
+            static_cast<void>(state->future.get());
+            handle.resume();
+        }).detach();
+        return true;
+    }
+
+    [[nodiscard]] TResult await_resume() const {
+        return state_->future.get();
+    }
+
+private:
+    struct State {
+        explicit State(std::future<TResult> future)
+            : future(std::move(future)) {}
+
+        std::shared_future<TResult> future;
+    };
+
+    std::shared_ptr<State> state_;
+};
+
+template <typename TResult>
+class CoroutineTask {
+public:
+    struct promise_type {
+        CoroutineTask get_return_object() {
+            return CoroutineTask{
+                std::coroutine_handle<promise_type>::from_promise(*this)};
+        }
+
+        [[nodiscard]] std::suspend_always initial_suspend() noexcept {
+            return {};
+        }
+
+        struct FinalAwaiter {
+            [[nodiscard]] bool await_ready() noexcept {
+                return false;
+            }
+
+            void await_suspend(
+                std::coroutine_handle<promise_type> handle) noexcept {
+                auto& promise = handle.promise();
+                if (promise.error) {
+                    promise.result.set_exception(promise.error);
+                } else {
+                    promise.result.set_value(std::move(promise.value));
+                }
+            }
+
+            void await_resume() noexcept {}
+        };
+
+        [[nodiscard]] FinalAwaiter final_suspend() noexcept {
+            return {};
+        }
+
+        void return_value(TResult result) {
+            value = std::move(result);
+        }
+
+        void unhandled_exception() {
+            error = std::current_exception();
+        }
+
+        std::promise<TResult> result;
+        TResult value{};
+        std::exception_ptr error;
+    };
+
+    using Handle = std::coroutine_handle<promise_type>;
+
+    explicit CoroutineTask(Handle handle) : handle_(handle) {
+        result_ = handle.promise().result.get_future();
+    }
+
+    CoroutineTask(const CoroutineTask&) = delete;
+    CoroutineTask& operator=(const CoroutineTask&) = delete;
+
+    CoroutineTask(CoroutineTask&& other) noexcept
+        : handle_(std::exchange(other.handle_, Handle{})),
+          result_(std::move(other.result_)) {}
+
+    CoroutineTask& operator=(CoroutineTask&& other) noexcept {
+        if (this != &other) {
+            if (handle_) {
+                handle_.destroy();
+            }
+            handle_ = std::exchange(other.handle_, Handle{});
+            result_ = std::move(other.result_);
+        }
+        return *this;
+    }
+
+    ~CoroutineTask() {
+        if (handle_) {
+            handle_.destroy();
+        }
+    }
+
+    void start() {
+        if (handle_ && !handle_.done()) {
+            handle_.resume();
+        }
+    }
+
+    [[nodiscard]] TResult get() {
+        return result_.get();
+    }
+
+private:
+    Handle handle_;
+    std::future<TResult> result_;
 };
 
 class ThreadPool {
@@ -257,6 +389,50 @@ void calcUsingAsync(const OrderPerAccounts& orders_per_account) {
               << required_broker_limit << '\n';
 }
 
+CoroutineTask<Result> processAccountCoroutine(
+    const std::string& account,
+    const OrderDetails& orders,
+    int worker_id) {
+    Result result = co_await AsyncAwaitable<Result>{
+        [&account, &orders, worker_id] {
+            const auto [lot_balance, error] =
+                OrderProcessor::process(orders);
+            if (error) {
+                std::cerr << "Account " << account << " worker " << worker_id
+                          << " error: " << *error << '\n';
+            }
+            return Result{worker_id, lot_balance, error};
+        }};
+    co_return result;
+}
+
+void calcUsingCoroutines(const OrderPerAccounts& orders_per_account) {
+    std::vector<CoroutineTask<Result>> submitted;
+    submitted.reserve(orders_per_account.size());
+
+    int worker_id = 0;
+    for (const auto& [account, orders] : orders_per_account) {
+        submitted.emplace_back(
+            processAccountCoroutine(account, orders, worker_id));
+        ++worker_id;
+    }
+
+    for (auto& task : submitted) {
+        task.start();
+    }
+
+    int required_broker_limit = 0;
+    for (auto& task : submitted) {
+        const Result result = task.get();
+        if (!result.error) {
+            required_broker_limit += result.lot_balance;
+        }
+    }
+
+    std::cout << "calcUsingCoroutines - required_broker_limit: "
+              << required_broker_limit << '\n';
+}
+
 } // namespace concurrent_example
 
 int main() {
@@ -272,6 +448,9 @@ int main() {
 
     std::cout << "Using std::async with futures\n";
     calcUsingAsync(orders);
+
+    std::cout << "Using C++ coroutines with async work\n";
+    calcUsingCoroutines(orders);
 
     return 0;
 }
