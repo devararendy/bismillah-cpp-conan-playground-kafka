@@ -872,7 +872,37 @@ explicit AsyncAwaitable(Function&& function)
           std::async(std::launch::async, std::forward<Function>(function)))) {}
 ```
 
-The constructor immediately starts the supplied callable with `std::async(std::launch::async)`. `std::forward<Function>` forwards the callable while preserving whether it was passed as an lvalue or rvalue.
+The constructor immediately starts the supplied callable with `std::async(std::launch::async)`.
+
+### What does `Function&&` mean?
+
+There are two uses of `&&` in C++, depending on whether the referenced type is deduced.
+
+- In `Function&&` here, `Function` is a template parameter being deduced by the function call. This is a **forwarding reference** (also called an universal reference), not simply an rvalue reference.
+- An ordinary rvalue reference, such as `std::string&&`, binds only to an rvalue. A forwarding reference can bind to either an lvalue or an rvalue.
+
+For example:
+
+```cpp
+auto lambda = [] { return Result{}; };
+
+AsyncAwaitable<Result> from_lvalue{lambda};       // lambda is an lvalue
+AsyncAwaitable<Result> from_rvalue{[] { return Result{}; }}; // lambda is an rvalue
+```
+
+Both calls are valid. The forwarding reference preserves which kind of value was supplied:
+
+```cpp
+std::forward<Function>(function)
+```
+
+`std::forward` does not copy or move by itself. It returns a value category suitable for the next function to receive. This is useful here because `std::async` can accept and store the callable without restricting the API to lvalues or rvalues.
+
+```cpp
+CoroutineTask(CoroutineTask&& other) noexcept;
+```
+
+The `&&` in this move constructor has a different meaning: here, `CoroutineTask` is not a deduced template parameter, so this is an ordinary **rvalue reference**.
 
 `std::make_shared<State>` owns an object containing the future. Shared ownership is used because a waiting `std::thread` and the coroutine's awaitable may both hold references to the future while work is in progress.
 

@@ -203,6 +203,7 @@ The code is intentionally compact and follows a simple structure:
 
 - `cmd/helloworld/main.cpp` demonstrates structured logging
 - `cmd/domain1/consumer.cpp` demonstrates Kafka consumption
+- `cmd/concurrent/concurrent.cpp` demonstrates coroutines, thread pools, and forwarding references
 - `internal/common/kafka/kafka.hpp` contains the reusable consumer wrapper
 
 This project is a good base for adding more command-line services or additional Kafka producers/consumers.
