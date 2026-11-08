@@ -206,6 +206,8 @@ The code is intentionally compact and follows a simple structure:
 - `cmd/concurrent/concurrent.cpp` demonstrates coroutines, thread pools, and forwarding references
 - `internal/common/kafka/kafka.hpp` contains the reusable consumer wrapper
 
+The `submit()` implementation in the concurrent example also includes a detailed explanation of names such as `std::future`, `std::invoke_result_t`, `std::packaged_task`, `std::make_shared`, and `std::forward` in [cmd/concurrent/README.md](cmd/concurrent/README.md).
+
 This project is a good base for adding more command-line services or additional Kafka producers/consumers.
 
 ---

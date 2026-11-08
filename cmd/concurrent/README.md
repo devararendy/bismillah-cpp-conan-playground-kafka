@@ -244,7 +244,188 @@ ThreadPool(const ThreadPool&) = delete;
 ThreadPool& operator=(const ThreadPool&) = delete;
 ```
 
-Deleting copy operations prevents copying an object that owns threads, mutexes, queued tasks, and shutdown state. Copies would cause ambiguous ownership and potentially make both copies try to join or destroy the same resources.
+These are two different special member functions. Each declaration controls a different operation, and neither declaration is a default constructor.
+
+#### First line: copy constructor
+
+```cpp
+ThreadPool(const ThreadPool&);
+```
+
+This is the copy constructor. It describes what happens when a new `ThreadPool` is created from an existing `ThreadPool`:
+
+```cpp
+ThreadPool first(4);
+ThreadPool second(first); // uses the copy constructor
+ThreadPool third = first; // also uses the copy constructor
+```
+
+The parameter is named implicitly here and has the type `const ThreadPool&`, meaning a reference to an existing object that the constructor promises not to modify.
+
+Adding `= delete` prevents the copy constructor from being used:
+
+```cpp
+ThreadPool second(first); // compile-time error: copy constructor is deleted
+```
+
+This declaration does not prevent assignment to an already-created object.
+
+#### Second line: copy assignment operator
+
+```cpp
+ThreadPool& operator=(const ThreadPool&);
+```
+
+This is the copy assignment operator. It describes assignment from an existing `ThreadPool` into another `ThreadPool` that already exists:
+
+```cpp
+ThreadPool first(2);
+ThreadPool second(4);
+
+second = first; // uses operator=
+```
+
+Unlike the copy constructor, it can return a reference so assignment expressions may be chained:
+
+```cpp
+third = second = first;
+```
+
+The implementation conventionally returns `*this`, but `= delete` prevents all implementations of this copy assignment operator. Therefore:
+
+```cpp
+second = first; // compile-time error: copy assignment is deleted
+```
+
+#### Are both lines required?
+
+Usually, yes, if the class is intended to be completely non-copyable.
+
+- Delete only the copy constructor: copy construction is blocked, but copy assignment may still be available.
+- Delete only the copy assignment operator: assignment is blocked, but copy construction may still be available.
+- Delete both: the class is non-copyable through ordinary copy operations.
+
+The first line alone does not disable assignment. The second line alone does not disable construction.
+
+```cpp
+ThreadPool(const ThreadPool&) = delete;
+```
+
+means only "copy construction is not allowed."
+
+```cpp
+ThreadPool& operator=(const ThreadPool&) = delete;
+```
+
+means only "copy assignment is not allowed."
+
+If neither declaration is deleted or declared, C++ may generate implicit copy operations. This would attempt shallow copies of member variables; that is especially unsuitable for this class because it owns worker threads, a mutex, a condition variable, and queued tasks. Shallow copying those resources would not create independent working copies and could lead to invalid ownership or multiple objects joining or destroying the same resources.
+
+Declaring either copy operation may also affect implicit move-operation generation. This class also has a user-declared destructor, so it does not get implicit move construction or move assignment in its original form; use of `std::move(pool)` does not make copying legal. If move support is wanted later, it must be designed explicitly, including joining or shutting down threads and transferring ownership safely.
+
+#### This does not prevent construction
+
+These lines prevent copy operations only. They do not prevent a normal constructor:
+
+```cpp
+ThreadPool pool(4); // uses the constructor that accepts worker_count
+```
+
+This class has no default constructor unless one is added:
+
+```cpp
+ThreadPool(std::size_t worker_count);
+```
+
+There is no parameterless constructor declaration in this class. As a result, C++ does not generate a default constructor here. The code therefore does not permit:
+
+```cpp
+ThreadPool pool; // error: no parameterless constructor
+```
+
+The word `explicit` before the constructor means that conversion from an integer-like value cannot be used implicitly:
+
+```cpp
+ThreadPool make_pool(ThreadPool pool);
+
+make_pool(4); // normally invalid if the constructor is explicit
+```
+
+It does not control copying and is separate from `= delete`.
+
+#### Preventing construction while exposing `Class::method()`
+
+To make callers use only static methods and prevent them from creating objects, put the constructors in the private section and delete them:
+
+```cpp
+class MathUtility {
+public:
+    static int add(int left, int right) {
+        return left + right;
+    }
+
+private:
+    MathUtility() = delete;
+};
+```
+
+Call it without creating an object:
+
+```cpp
+int result = MathUtility::add(20, 22);
+```
+
+The private deleted constructor prevents construction without arguments:
+
+```cpp
+MathUtility utility;     // compile-time error
+MathUtility utility = {}; // compile-time error
+```
+
+For constructors that take parameters, delete or declare every constructor you want to prevent. Removing the public constructor is enough when it is a utility class that should never be instantiated:
+
+```cpp
+class Utility {
+public:
+    static void run();
+
+private:
+    Utility() = delete;
+};
+```
+
+A private constructor can also be used together with a static factory owned by the same class:
+
+```cpp
+class Resource {
+public:
+    static Resource create() {
+        return Resource{}; // allowed: the static method can access private constructors
+    }
+
+private:
+    Resource() = default;
+};
+
+Resource resource = Resource::create();
+```
+
+Every construction from outside the class is prevented, while code inside `Resource` controls when and how an object is created.
+
+Static methods do not require an object and are called through the class name:
+
+```cpp
+Utility::run();
+```
+
+Inside the class, static methods cannot use `this`, and they cannot directly access ordinary non-static member variables. For work that depends on thread pools, mutexes, queues, or other instance state, an instance method is more appropriate.
+
+The current `ThreadPool` is intentionally not a construction-forbidden utility class. Its constructor is public because callers need one pool object and reuse that object:
+
+```cpp
+ThreadPool pool(4);
+pool.submit([] { return 42; });
+```
 
 ### Destructor
 
@@ -264,40 +445,137 @@ template <typename Function>
     -> std::future<std::invoke_result_t<Function>> {
 ```
 
-This function is a template and can submit any callable with no required arguments.
+`submit()` is the public method that adds asynchronous work to the pool. The complete signature can be read from left to right.
 
-- `Function&&` is a forwarding reference, not always an rvalue reference. It can accept both lvalues and rvalues while preserving value category.
-- `std::invoke_result_t<Function>` computes the callable's return type at compile time using type traits.
-- `std::future<ReturnType>` lets the caller retrieve that result later.
-- The trailing return type after `->` explicitly documents the future type.
-- `[[nodiscard]]` requires callers not to ignore the returned `std::future`; ignoring it would lose the task's result and exception information.
+- `template <typename Function>` makes the function generic: `Function` may be a lambda, function object, or function pointer.
+- `Function&& function` is a forwarding reference in this template context, so it can accept both lvalues and rvalues.
+- `[[nodiscard]]` tells the compiler to warn if a caller ignores the returned `std::future`. Its result or exception should be retained and checked.
+- `auto` means the compiler must determine the function's return type from the trailing return type.
+- `-> std::future<std::invoke_result_t<Function>>` explicitly describes that return type after the parameter list. In this example, `submit()` returns a `std::future` containing whatever value the callable returns.
 
-This distinction matters because many errors or successful values are stored by the future after `submit()` returns.
+The `std::` prefix means that the following name belongs to the C++ Standard Library namespace. It does not refer to a separate package or a new custom type. For example, `std::future` is provided by the `<future>` header, and `std::make_shared` is provided by `<memory>`.
+
+For example, the value returned by this callable...
+
+```cpp
+auto calculate = [] {
+    return 42;
+};
+```
+
+...can be retrieved from this future:
+
+```cpp
+std::future<int> future = pool.submit(calculate);
+int result = future.get();
+```
+
+The callable is invoked later by a worker thread; `submit()` itself does not wait for it.
+
+#### `std::invoke_result_t`
+
+```cpp
+std::invoke_result_t<Function>
+```
+
+`std::invoke_result_t` is a compile-time type utility from `<type_traits>`. It examines how `Function` would be called with the supplied arguments and computes its return type.
+
+Because `submit()` calls the function with no arguments, the queue does not pass parameters here:
+
+```cpp
+Function()   // equivalent idea: call Function with no arguments
+```
+
+Examples:
+
+```cpp
+std::invoke_result_t<decltype([] { return 42; })>
+// int
+
+std::invoke_result_t<decltype([] { return std::string{"done"}; })>
+// std::string
+```
+
+In the actual signature, no arguments are listed when computing the return type, so a callable with no parameters is assumed. If the callable were declared to require parameters, this generic signature would not match its intended worker-task behavior.
+
+For a `void` callable, the inferred result type is `void`, so the returned type becomes:
+
+```cpp
+std::future<void>
+```
+
+Calling `get()` on that future waits for completion but does not return a value.
+
+`_t` is a convention used by several standard type traits: it means that the template's `.type` member is exposed directly as a type alias.
+
+#### Why is the result wrapped in `std::future`?
+
+```cpp
+std::future<std::invoke_result_t<Function>>
+```
+
+A `std::future<T>` represents a value of type `T` that may not be available yet. It commonly represents work completed by another thread.
+
+Important operations are:
+
+- `submit()` creates and returns the future.
+- A worker eventually calls the submitted function.
+- `future.wait()` waits without retrieving the value.
+- `future.get()` waits and retrieves the value.
+- `future.get()` can throw an exception if the worker function threw one.
+
+A future is generally single-use: call `get()` only once. The same state should not be read through multiple futures; that is why this code first obtains one future from the `packaged_task`.
 
 ```cpp
 using ReturnType = std::invoke_result_t<Function>;
 ```
 
-Creates a local type alias so the packaged task and future declarations remain readable.
+This creates a readable local type alias. `ReturnType` is not a runtime variable; it is a name for the compile-time result type. It replaces repeated uses of the longer type-trait expression.
 
 ```cpp
 auto task = std::make_shared<std::packaged_task<ReturnType()>>(
     std::forward<Function>(function));
 ```
 
-Creates a shared pointer to a package that can be called with no arguments and return `ReturnType`.
+This line creates the worker callable and associates it with shared result state.
 
-- `std::packaged_task` wraps the callable and stores its result in an associated future.
-- `ReturnType()` describes a callable taking no parameters and returning `ReturnType`.
-- `std::make_shared` allocates and owns the task safely.
-- `std::forward` forwards the callable as an lvalue or rvalue according to what the caller supplied.
-- A shared pointer is used because the task is moved into the queue and executed by a worker thread that may outlive the submit function's local variables.
+##### `std::packaged_task`
+
+`std::packaged_task<ReturnType()>` wraps a callable that:
+
+- takes no arguments, represented by `()`;
+- returns `ReturnType`, represented before the parentheses.
+
+Calling the packaged task invokes the original callable and stores either:
+
+- its returned value in a shared state; or
+- the exception it throws in that shared state.
+
+It is therefore a bridge between a callable, a worker thread, and a `std::future`.
+
+##### `std::make_shared`
+
+`std::make_shared<std::packaged_task<...>>(...)` allocates a task and returns a `std::shared_ptr` to it.
+
+- `std::make_shared` constructs and owns the object.
+- `std::shared_ptr` means multiple owners share one object.
+- The task is captured by the queue lambda and remains alive after `submit()` returns.
+- A worker may invoke it while the local variable in `submit()` no longer exists.
+
+##### `std::forward`
+
+`std::forward<Function>(function)` forwards the original callable while preserving whether the caller passed it as an lvalue or rvalue.
+
+- An lvalue such as a named lambda is forwarded as an lvalue.
+- A temporary lambda passed directly to `submit()` is forwarded as an rvalue.
+
+This allows the destination, such as `packaged_task`, to use the most appropriate copy or move operation. It also makes the API accept both named callables and temporary callables.
 
 ```cpp
 std::future<ReturnType> result = task->get_future();
 ```
 
-Obtains the future before the task executes. The packaged task owns the shared state where its eventual result or exception will be stored.
+Before the task is queued, this obtains the future associated with the packaged task. The future and packaged task refer to the same shared result state.
 
 ```cpp
 {
