@@ -18,6 +18,7 @@ add_executable(circle_checker cmd/circle-checker/circle-checker.cpp)
 add_executable(sample_load_config cmd/sample-load-config/sample-load-config.cpp)
 add_executable(concurrent cmd/concurrent/concurrent.cpp)
 add_executable(lockfree cmd/lockfree/lockfree.cpp)
+add_executable(orderbook cmd/orderbook/orderbook.cpp)
 
 #  FORCE TARGET STATIC LINKING
 # This tells the compiler to bundle your source code and fmt together 
@@ -29,6 +30,7 @@ target_link_libraries(circle_checker PRIVATE fmt::fmt quill::quill RdKafka::rdka
 target_link_libraries(sample_load_config PRIVATE fmt::fmt quill::quill RdKafka::rdkafka++)
 target_link_libraries(concurrent PRIVATE fmt::fmt quill::quill RdKafka::rdkafka++)
 target_link_libraries(lockfree PRIVATE fmt::fmt quill::quill RdKafka::rdkafka++)
+target_link_libraries(orderbook PRIVATE fmt::fmt quill::quill RdKafka::rdkafka++)
 
 include(CTest)
 if(BUILD_TESTING)

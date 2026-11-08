@@ -90,6 +90,24 @@ bash reconfig.sh
 ./build/release/kafka_consumer
 ```
 
+## 3) orderbook
+
+Source: `cmd/orderbook/orderbook.cpp`
+
+Run a stock-specific order book and send CSV events on standard input:
+
+```bash
+printf 'u1,AAPL,100,10,Sell,New,s1\nu2,AAPL,101,6,Buy,New,b1\n' | ./build/release/orderbook AAPL
+```
+
+The CSV format is:
+
+```text
+user_id,stock_code,price,qty,side,New|Cancel,order_id(optional)
+```
+
+New orders are accepted and added to price-time priority queues. Crossing orders produce `Executed` output. A cancellation can use the generated order ID from the optional CSV field, or omit it to cancel the first active matching order for that user, side, and price.
+
 ---
 
 For the full project setup and dependency instructions, see the main project README at [README.md](../README.md).
